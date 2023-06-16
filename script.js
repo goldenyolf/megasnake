@@ -1,153 +1,135 @@
-document.addEventListener('DOMContentLoaded', function () {
-    // 頁面元素
-    var homepage = document.getElementById('homepage');
-    var gamepage = document.getElementById('gamepage');
-    var gameOverPage = document.getElementById('gameOverPage');
-    var colorPicker = document.getElementById('colorPicker');
-    var startGameButton = document.getElementById('startGameButton');
-    var playAgainButton = document.getElementById('playAgainButton');
-    var goToHomePageButton = document.getElementById('goToHomePageButton');
-    var finalScore = document.getElementById('finalScore');
-    var scoreDisplay = document.getElementById('score');
+// 等待頁面載入完成
+document.addEventListener("DOMContentLoaded", function () {
+    // 獲取 HTML 元素和設置一些基本變量
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const tileSize = 40;
+    let snake, apple, score, speed, direction, interval;
 
-    // 遊戲元素
-    var canvas = document.getElementById('game');
-    var ctx = canvas.getContext('2d');
-    var tileSize = 40;
-    var direction = 'right';
-    var snake;
-    var apple;
-    var score;
-    var snakeColor;
+    // 註冊按鈕事件監聽器
+    document.getElementById("startGameButton").addEventListener("click", startGame);
+    document.getElementById("playAgainButton").addEventListener("click", startGame);
+    document.getElementById("goToHomePageButton").addEventListener("click", goToHomePage);
 
-    // 事件處理器
-    startGameButton.addEventListener('click', function () {
-        snakeColor = colorPicker.value;
-        homepage.style.display = 'none';
-        gamepage.style.display = 'block';
-        startGame();
-    });
-
-    playAgainButton.addEventListener('click', function () {
-        gameOverPage.style.display = 'none';
-        gamepage.style.display = 'block';
-        startGame();
-    });
-
-    goToHomePageButton.addEventListener('click', function () {
-        gameOverPage.style.display = 'none';
-        homepage.style.display = 'block';
-    });
-
+    // 開始遊戲函數
     function startGame() {
-        direction = 'right';
-        snake = [
-            { x: 10, y: 10 },
-            { x: 9, y: 10 },
-            { x: 8, y: 10 },
-        ];
+        // 初始化蛇的位置，分數，速度和方向
+        snake = [{ x: 5, y: 5 }];
         score = 0;
-        spawnApple();
-        updateScore();
-        gameLoop();
+        speed = parseFloat(document.getElementById("difficultyPicker").value) * 100;
+        direction = "right";
+        spawnApple(); // 生成蘋果
+        clearInterval(interval); // 清除先前的遊戲循環
+        interval = setInterval(gameLoop, speed); // 啟動新的遊戲循環
+        // 顯示遊戲頁面，隱藏其他頁面
+        document.getElementById("homepage").style.display = "none";
+        document.getElementById("gameOverPage").style.display = "none";
+        document.getElementById("gamepage").style.display = "block";
     }
 
-    document.addEventListener('keydown', function (e) {
-        var newDirection = e.key.substr(5).toLowerCase();
-        if ((newDirection == 'up' && direction != 'down') ||
-            (newDirection == 'down' && direction != 'up') ||
-            (newDirection == 'left' && direction != 'right') ||
-            (newDirection == 'right' && direction != 'left')) {
-            direction = newDirection;
-        }
-    });
+    // 返回首頁函數
+    function goToHomePage() {
+        clearInterval(interval); // 停止遊戲循環
+        // 顯示首頁，隱藏其他頁面
+        document.getElementById("homepage").style.display = "block";
+        document.getElementById("gameOverPage").style.display = "none";
+        document.getElementById("gamepage").style.display = "none";
+    }
 
+    // 遊戲主循環
     function gameLoop() {
-        var head = Object.assign({}, snake[0]);
-    
+        // 計算蛇頭的新位置
+        let headX = snake[0].x;
+        let headY = snake[0].y;
         switch (direction) {
-            case 'right':
-                head.x++;
+            case "right":
+                headX++;
                 break;
-            case 'left':
-                head.x--;
+            case "left":
+                headX--;
                 break;
-            case 'up':
-                head.y--;
+            case "up":
+                headY--;
                 break;
-            case 'down':
-                head.y++;
+            case "down":
+                headY++;
                 break;
         }
-    
-        if (head.x === apple.x && head.y === apple.y) {
-            score++;
-            updateScore();
-            spawnApple();
-        } else {
-            snake.pop();
-        }
-    
-        snake.unshift(head);
-    
-        if (head.x < 1 || head.y < 1 || head.x >= canvas.width / tileSize - 1 || head.y >= canvas.height / tileSize - 1 || checkCollision(head, snake.slice(1))) {
-            gameOver();
+
+        // 檢查是否撞到牆壁或自己
+        if (headX < 1 || headY < 1 || headX >= canvas.width / tileSize - 1 || headY >= canvas.height / tileSize - 1 || checkCollision({ x: headX, y: headY }, snake)) {
+            gameOver(); // 遊戲結束
             return;
         }
-    
-        // 清除畫布
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-        // 繪製背景（白色）
-        ctx.fillStyle = '#FFFFFF';
+
+        // 檢查是否吃到蘋果
+        const appleCollision = checkCollision({ x: headX, y: headY }, [apple]);
+        if (appleCollision) {
+            score++; // 增加分數
+            spawnApple(); // 生成新的蘋果
+        } else {
+            snake.pop(); // 移除蛇的尾巴
+        }
+
+        // 添加新的頭到蛇的開頭
+        snake.unshift({ x: headX, y: headY });
+
+        // 繪製遊戲區域
+        ctx.fillStyle = "white";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-        // 繪製外圍牆（黑色）
-        ctx.fillStyle = '#000000';
+
+        // 繪製黑色的牆壁
+        ctx.fillStyle = "black";
         ctx.fillRect(0, 0, canvas.width, tileSize);
         ctx.fillRect(0, canvas.height - tileSize, canvas.width, tileSize);
         ctx.fillRect(0, 0, tileSize, canvas.height);
         ctx.fillRect(canvas.width - tileSize, 0, tileSize, canvas.height);
-    
+
+        // 繪製蘋果
+        ctx.fillStyle = "red";
+        ctx.fillRect(apple.x * tileSize, apple.y * tileSize, tileSize, tileSize);
+
         // 繪製蛇
-        ctx.fillStyle = snakeColor;
-        for (var i = 0; i < snake.length; i++) {
+        ctx.fillStyle = "green";
+        for (let i = 0; i < snake.length; i++) {
             ctx.fillRect(snake[i].x * tileSize, snake[i].y * tileSize, tileSize, tileSize);
         }
-    
-        // 繪製蘋果
-        ctx.fillStyle = '#FF0000';
-        ctx.fillRect(apple.x * tileSize, apple.y * tileSize, tileSize, tileSize);
-    
-        // 設置遊戲速度
-        setTimeout(gameLoop, 100);
-    }
-    
 
+        // 顯示當前分數
+        document.getElementById("score").innerText = "分數: " + score;
+    }
+
+    // 生成蘋果的函數
     function spawnApple() {
-        var maxPosition = (canvas.width / tileSize) - 3;
-        apple = {
-            x: Math.floor(Math.random() * maxPosition) + 2,
-            y: Math.floor(Math.random() * maxPosition) + 2
-        };
+        do {
+            apple = { x: Math.floor(Math.random() * (canvas.width / tileSize - 2)) + 1, y: Math.floor(Math.random() * (canvas.height / tileSize - 2)) + 1 };
+        } while (checkCollision(apple, snake));
     }
 
-    function updateScore() {
-        scoreDisplay.textContent = '分數: ' + score;
-    }
-
-    function checkCollision(head, array) {
-        for (var i = 0; i < array.length; i++) {
-            if (head.x === array[i].x && head.y === array[i].y) {
+    // 檢查兩個位置是否碰撞
+    function checkCollision(position, array) {
+        for (let i = 0; i < array.length; i++) {
+            if (position.x === array[i].x && position.y === array[i].y) {
                 return true;
             }
         }
         return false;
     }
 
+    // 遊戲結束的函數
     function gameOver() {
-        gamepage.style.display = 'none';
-        gameOverPage.style.display = 'block';
-        finalScore.textContent = '你的分數: ' + score;
+        clearInterval(interval); // 停止遊戲循環
+        // 顯示遊戲結束頁面，更新分數
+        document.getElementById("finalScore").innerText = "你的分數: " + score;
+        document.getElementById("gamepage").style.display = "none";
+        document.getElementById("gameOverPage").style.display = "block";
     }
+
+    // 監聽鍵盤事件以改變蛇的方向
+    document.addEventListener("keydown", function (e) {
+        const newDirection = { 37: "left", 38: "up", 39: "right", 40: "down" }[e.keyCode];
+        if (newDirection) {
+            direction = newDirection;
+        }
+    });
 });
