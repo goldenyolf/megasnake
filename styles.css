@@ -1,0 +1,26 @@
+body, html {
+    height: 100%;
+    margin: 0;
+}
+
+.page {
+    text-align: center;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 20px;
+}
+
+#game {
+    display: block;
+    margin: auto;
+    margin-top: 10px;
+}
+
+#homepage img {
+    width: 150px;
+    height: 150px;
+}
+
+#gameOverPage h2 {
+    margin-top: 100px;
+}
